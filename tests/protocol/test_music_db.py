@@ -2,6 +2,7 @@ import unittest
 from unittest import mock
 
 from mopidy.models import Album, Artist, Playlist, Ref, SearchResult, Track
+from mopidy.types import Uri
 
 from mopidy_mpd.protocol import music_db, stored_playlists
 from tests import protocol
@@ -812,7 +813,12 @@ class MusicDatabaseListTest(protocol.BaseTestCase):
 
     def test_list_artist_should_not_return_artists_without_names(self):
         self.backend.library.dummy_find_exact_result = SearchResult(
-            tracks=[Track(artists=[Artist(name="")])]
+            tracks=(
+                Track(
+                    uri=Uri("test:foo"),
+                    performers=frozenset([Artist(name="")]),
+                ),
+            )
         )
 
         self.send_request('list "artist"')
@@ -871,7 +877,12 @@ class MusicDatabaseListTest(protocol.BaseTestCase):
 
     def test_list_albumartist_should_not_return_artists_without_names(self):
         self.backend.library.dummy_find_exact_result = SearchResult(
-            tracks=[Track(album=Album(artists=[Artist(name="")]))]
+            tracks=(
+                Track(
+                    uri=Uri("test:foo"),
+                    performers=frozenset([Artist(name="")]),
+                ),
+            )
         )
 
         self.send_request('list "albumartist"')
@@ -933,7 +944,12 @@ class MusicDatabaseListTest(protocol.BaseTestCase):
 
     def test_list_composer_should_not_return_artists_without_names(self):
         self.backend.library.dummy_find_exact_result = SearchResult(
-            tracks=[Track(composers=[Artist(name="")])]
+            tracks=(
+                Track(
+                    uri=Uri("test:foo"),
+                    performers=frozenset([Artist(name="")]),
+                ),
+            )
         )
 
         self.send_request('list "composer"')
@@ -995,7 +1011,12 @@ class MusicDatabaseListTest(protocol.BaseTestCase):
 
     def test_list_performer_should_not_return_artists_without_names(self):
         self.backend.library.dummy_find_exact_result = SearchResult(
-            tracks=[Track(performers=[Artist(name="")])]
+            tracks=(
+                Track(
+                    uri=Uri("test:foo"),
+                    performers=frozenset([Artist(name="")]),
+                ),
+            )
         )
 
         self.send_request('list "performer"')
@@ -1072,7 +1093,12 @@ class MusicDatabaseListTest(protocol.BaseTestCase):
 
     def test_list_album_should_not_return_albums_without_names(self):
         self.backend.library.dummy_find_exact_result = SearchResult(
-            tracks=[Track(album=Album(name=""))]
+            tracks=(
+                Track(
+                    uri=Uri("test:foo"),
+                    performers=frozenset([Artist(name="")]),
+                ),
+            )
         )
 
         self.send_request('list "album"')

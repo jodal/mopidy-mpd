@@ -1,6 +1,7 @@
 import unittest
 
 from mopidy.models import Album, Artist, Playlist, TlTrack, Track
+from mopidy.types import Date, DurationMs, TracklistId, Uri
 
 from mopidy_mpd import translator
 from mopidy_mpd.protocol import tagtype_list
@@ -9,29 +10,43 @@ from tests import path_utils
 
 class TrackMpdFormatTest(unittest.TestCase):
     track = Track(
-        uri="à uri",
-        artists=[Artist(name="an artist"), Artist(name="yet another artist")],
+        uri=Uri("à uri"),
+        artists=frozenset(
+            [
+                Artist(name="an artist"),
+                Artist(name="yet another artist"),
+            ]
+        ),
         name="a nàme",
         album=Album(
             name="an album",
             num_tracks=13,
-            artists=[
-                Artist(name="an other artist"),
-                Artist(name="still another artist"),
-            ],
-            uri="urischeme:àlbum:12345",
+            artists=frozenset(
+                [
+                    Artist(name="an other artist"),
+                    Artist(name="still another artist"),
+                ]
+            ),
+            uri=Uri("urischeme:àlbum:12345"),
         ),
         track_no=7,
-        composers=[Artist(name="a composer"), Artist(name="another composer")],
-        performers=[
-            Artist(name="a performer"),
-            Artist(name="another performer"),
-        ],
+        composers=frozenset(
+            [
+                Artist(name="a composer"),
+                Artist(name="another composer"),
+            ]
+        ),
+        performers=frozenset(
+            [
+                Artist(name="a performer"),
+                Artist(name="another performer"),
+            ]
+        ),
         genre="a genre",
-        date="1977-01-01",
+        date=Date("1977-01-01"),
         disc_no=1,
         comment="a comment",
-        length=137000,
+        length=DurationMs(137000),
     )
 
     def setUp(self):
@@ -43,7 +58,11 @@ class TrackMpdFormatTest(unittest.TestCase):
 
     def test_track_to_mpd_format_for_empty_track(self):
         result = translator.track_to_mpd_format(
-            Track(uri="a uri", length=137000), tagtype_list.TAGTYPE_LIST
+            Track(
+                uri=Uri("a uri"),
+                length=DurationMs(137000),
+            ),
+            tagtype_list.TAGTYPE_LIST,
         )
         assert ("file", "a uri") in result
         assert ("Time", 137) in result
@@ -56,19 +75,28 @@ class TrackMpdFormatTest(unittest.TestCase):
 
     def test_track_to_mpd_format_with_position(self):
         result = translator.track_to_mpd_format(
-            Track(), tagtype_list.TAGTYPE_LIST, position=1
+            Track(uri=Uri("test:foo")),
+            tagtype_list.TAGTYPE_LIST,
+            position=1,
         )
         assert ("Pos", 1) not in result
 
     def test_track_to_mpd_format_with_tlid(self):
         result = translator.track_to_mpd_format(
-            TlTrack(1, Track()), tagtype_list.TAGTYPE_LIST
+            TlTrack(
+                tlid=TracklistId(1),
+                track=Track(uri=Uri("test:foo")),
+            ),
+            tagtype_list.TAGTYPE_LIST,
         )
         assert ("Id", 1) not in result
 
     def test_track_to_mpd_format_with_position_and_tlid(self):
         result = translator.track_to_mpd_format(
-            TlTrack(2, Track(uri="a uri")),
+            TlTrack(
+                tlid=TracklistId(2),
+                track=Track(uri=Uri("a uri")),
+            ),
             tagtype_list.TAGTYPE_LIST,
             position=1,
         )
@@ -120,6 +148,7 @@ class TrackMpdFormatTest(unittest.TestCase):
         assert ("MUSICBRAINZ_TRACKID", "715d581b-ef70-46d5-984b-e2c1d8feb8a0") in result
 
     def test_track_to_mpd_format_musicbrainz_albumid(self):
+        assert self.track.album
         album = self.track.album.replace(
             musicbrainz_id="715d581b-ef70-46d5-984b-e2c1d8feb8a0"
         )
@@ -131,6 +160,7 @@ class TrackMpdFormatTest(unittest.TestCase):
         artist = next(iter(self.track.artists)).replace(
             musicbrainz_id="715d581b-ef70-46d5-984b-e2c1d8feb8a0"
         )
+        assert self.track.album
         album = self.track.album.replace(artists=[artist])
         track = self.track.replace(album=album)
         result = translator.track_to_mpd_format(track, tagtype_list.TAGTYPE_LIST)
@@ -188,16 +218,18 @@ class TrackMpdFormatTest(unittest.TestCase):
         assert ("Title", "foo") in result
 
     def test_track_to_mpd_client_filtered(self):
-        configured_tagtypes = [
+        configured_tagtypes = {
             "Artist",
             "Album",
             "Title",
             "Track",
             "Name",
             "Genre",
-        ]
+        }
         result = translator.track_to_mpd_format(
-            TlTrack(122, self.track), configured_tagtypes, position=9
+            TlTrack(tlid=TracklistId(122), track=self.track),
+            configured_tagtypes,
+            position=9,
         )
         assert ("file", "à uri") in result
         assert ("Time", 137) in result
@@ -215,11 +247,12 @@ class TrackMpdFormatTest(unittest.TestCase):
 class PlaylistMpdFormatTest(unittest.TestCase):
     def test_mpd_format(self):
         playlist = Playlist(
-            tracks=[
-                Track(uri="foo", track_no=1),
-                Track(uri="bàr", track_no=2),
-                Track(uri="baz", track_no=3),
-            ]
+            uri=Uri("test:playlist"),
+            tracks=(
+                Track(uri=Uri("foo"), track_no=1),
+                Track(uri=Uri("bàr"), track_no=2),
+                Track(uri=Uri("baz"), track_no=3),
+            ),
         )
 
         result = translator.playlist_to_mpd_format(playlist, tagtype_list.TAGTYPE_LIST)
@@ -238,11 +271,12 @@ class PlaylistMpdFormatTest(unittest.TestCase):
 
     def test_mpd_format_with_range(self):
         playlist = Playlist(
-            tracks=[
-                Track(uri="foo", track_no=1),
-                Track(uri="bàr", track_no=2),
-                Track(uri="baz", track_no=3),
-            ]
+            uri=Uri("test:playlist"),
+            tracks=(
+                Track(uri=Uri("foo"), track_no=1),
+                Track(uri=Uri("bàr"), track_no=2),
+                Track(uri=Uri("baz"), track_no=3),
+            ),
         )
 
         result = translator.playlist_to_mpd_format(
