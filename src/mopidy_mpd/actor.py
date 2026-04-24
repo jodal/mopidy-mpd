@@ -83,4 +83,4 @@ class MpdFrontend(pykka.ThreadingActor, CoreListener):
 
     def send_idle(self, subsystem: str | None) -> None:
         if subsystem:
-            listener.send(session.MpdSession, subsystem)
+            listener.send(session.MpdSession, subsystem)  # pyright: ignore[reportArgumentType]

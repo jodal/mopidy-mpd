@@ -84,7 +84,9 @@ def _get_tracks(search_results: Iterable[SearchResult]) -> list[Track]:
     return list(itertools.chain(*[r.tracks for r in search_results]))
 
 
-def _album_as_track(album: Album) -> Track:
+def _album_as_track(album: Album) -> Track | None:
+    if album.uri is None:
+        return None
     return Track(
         uri=album.uri,
         name=f"Album: {album.name}",
@@ -94,7 +96,9 @@ def _album_as_track(album: Album) -> Track:
     )
 
 
-def _artist_as_track(artist: Artist) -> Track:
+def _artist_as_track(artist: Artist) -> Track | None:
+    if artist.uri is None:
+        return None
     return Track(
         uri=artist.uri,
         name=f"Artist: {artist.name}",
@@ -169,9 +173,17 @@ def find(context: MpdContext, *args: str) -> protocol.Result:
         and "composer" not in query
         and "performer" not in query
     ):
-        result_tracks += [_artist_as_track(a) for a in _get_artists(results)]
+        result_tracks += [
+            track
+            for a in _get_artists(results)
+            if (track := _artist_as_track(a)) is not None
+        ]
     if "album" not in query:
-        result_tracks += [_album_as_track(a) for a in _get_albums(results)]
+        result_tracks += [
+            track
+            for a in _get_albums(results)
+            if (track := _album_as_track(a)) is not None
+        ]
     result_tracks += _get_tracks(results)
     return translator.tracks_to_mpd_format(result_tracks, context.session.tagtypes)
 
@@ -471,8 +483,15 @@ def search(context: MpdContext, *args: str) -> protocol.Result:
     except ValueError:
         return None
     results = context.core.library.search(query).get()
-    artists = [_artist_as_track(a) for a in _get_artists(results)]
-    albums = [_album_as_track(a) for a in _get_albums(results)]
+    artists = [
+        track
+        for a in _get_artists(results)
+        if (track := _artist_as_track(a))
+        if not None
+    ]
+    albums = [
+        track for a in _get_albums(results) if (track := _album_as_track(a)) is not None
+    ]
     tracks = _get_tracks(results)
     return translator.tracks_to_mpd_format(
         artists + albums + tracks, context.session.tagtypes
